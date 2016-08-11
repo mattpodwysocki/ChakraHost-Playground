@@ -14,24 +14,68 @@ JsErrorCode DefineHostCallback(JsValueRef globalObject, const wchar_t *callbackN
 	return JsNoError;
 };
 
+JsValueRef InvokeConsole(const wchar_t* kind, JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState)
+{
+	wprintf(L"[JS {%s}]", kind);
+
+	for (USHORT i = 1; i < argumentCount; i++)
+	{
+		JsValueRef arg = arguments[i];
+	}
+
+	wprintf(L"\n");
+
+	return JS_INVALID_REFERENCE;
+};
+
 JsValueRef CALLBACK ConsoleLog(JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState)
 {
-	return JS_INVALID_REFERENCE;
+	return InvokeConsole(L"log", callee, isConstructCall, arguments, argumentCount, callbackState);
 };
 
 JsValueRef CALLBACK ConsoleWarn(JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState)
 {
-	return JS_INVALID_REFERENCE;
+	return InvokeConsole(L"warn", callee, isConstructCall, arguments, argumentCount, callbackState);
 };
 
 JsValueRef CALLBACK ConsoleInfo(JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState)
 {
-	return JS_INVALID_REFERENCE;
+	return InvokeConsole(L"info", callee, isConstructCall, arguments, argumentCount, callbackState);
 };
 
 JsValueRef CALLBACK ConsoleError(JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState)
 {
-	return JS_INVALID_REFERENCE;
+	return InvokeConsole(L"error", callee, isConstructCall, arguments, argumentCount, callbackState);
+};
+
+JsErrorCode ChakraHost::InitJsonParse()
+{
+	JsPropertyIdRef jsonPropertyId;
+	IfFailRet(JsGetPropertyIdFromName(L"JSON", &jsonPropertyId));
+	JsValueRef jsonObject;
+	IfFailRet(JsGetProperty(globalObject, jsonPropertyId, &jsonObject));
+	JsPropertyIdRef jsonParseId;
+	IfFailRet(JsGetPropertyIdFromName(L"parse", &jsonParseId));
+	IfFailRet(JsGetProperty(jsonObject, jsonParseId, &jsonParseObject));
+
+	return JsNoError;
+};
+
+JsErrorCode ChakraHost::InitConsole()
+{
+	JsPropertyIdRef consolePropertyId;
+	IfFailRet(JsGetPropertyIdFromName(L"console", &consolePropertyId));
+
+	JsValueRef consoleObject;
+	IfFailRet(JsCreateObject(&consoleObject));
+	IfFailRet(JsSetProperty(globalObject, consolePropertyId, consoleObject, true));
+
+	IfFailRet(DefineHostCallback(consoleObject, L"info", ConsoleInfo, this));
+	IfFailRet(DefineHostCallback(consoleObject, L"log", ConsoleLog, this));
+	IfFailRet(DefineHostCallback(consoleObject, L"warn", ConsoleWarn, this));
+	IfFailRet(DefineHostCallback(consoleObject, L"error", ConsoleError, this));
+
+	return JsNoError;
 };
 
 JsErrorCode ChakraHost::Init()
@@ -44,18 +88,8 @@ JsErrorCode ChakraHost::Init()
 	
 	IfFailRet(JsGetGlobalObject(&globalObject));
 
-	// Set up the console
-	JsPropertyIdRef consolePropertyId;
-	IfFailRet(JsGetPropertyIdFromName(L"console", &consolePropertyId));
-
-	JsValueRef consoleObject;
-	IfFailRet(JsCreateObject(&consoleObject));
-	IfFailRet(JsSetProperty(globalObject, consolePropertyId, consoleObject, true));
-
-	IfFailRet(DefineHostCallback(consoleObject, L"info", ConsoleInfo, nullptr));
-	IfFailRet(DefineHostCallback(consoleObject, L"log", ConsoleLog, nullptr));
-	IfFailRet(DefineHostCallback(consoleObject, L"warn", ConsoleWarn, nullptr));
-	IfFailRet(DefineHostCallback(consoleObject, L"error", ConsoleError, nullptr));
+	IfFailRet(InitJsonParse());
+	IfFailRet(InitConsole());
 
 	return JsNoError;
 };
