@@ -21,4 +21,12 @@
         } \
     }
 
-// TODO: reference additional headers your program requires here
+#define IfFailThrow(v, e) \
+    { \
+        JsErrorCode error = (v); \
+        if (error != JsNoError) \
+        { \
+            ThrowException((e)); \
+            return JS_INVALID_REFERENCE; \
+        } \
+    }

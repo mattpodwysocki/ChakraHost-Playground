@@ -1,6 +1,16 @@
 #include "stdafx.h"
 #include "ChakraHost.h"
 
+void ThrowException(const wchar_t* szException)
+{
+	// We ignore error since we're already in an error state.
+	JsValueRef errorValue;
+	JsValueRef errorObject;
+	JsPointerToString(szException, wcslen(szException), &errorValue);
+	JsCreateError(errorValue, &errorObject);
+	JsSetException(errorObject);
+}
+
 JsErrorCode DefineHostCallback(JsValueRef globalObject, const wchar_t *callbackName, JsNativeFunction callback, void *callbackState)
 {
 	JsPropertyIdRef propertyId;
@@ -8,7 +18,6 @@ JsErrorCode DefineHostCallback(JsValueRef globalObject, const wchar_t *callbackN
 
 	JsValueRef function;
 	IfFailRet(JsCreateFunction(callback, callbackState, &function));
-
 	IfFailRet(JsSetProperty(globalObject, propertyId, function, true));
 
 	return JsNoError;
@@ -21,6 +30,31 @@ JsValueRef InvokeConsole(const wchar_t* kind, JsValueRef callee, bool isConstruc
 	for (USHORT i = 1; i < argumentCount; i++)
 	{
 		JsValueRef arg = arguments[i];
+		JsValueType type;
+		IfFailThrow(JsGetValueType(arg, &type), L"Cannot get the value type for the parameter");
+
+		switch (type)
+		{
+			case JsUndefined:
+				wprintf(L"undefined");
+				break;
+			case JsNull:
+				wprintf(L"null");
+				break;
+			case JsNumber:
+				break;				break;
+			case JsString:
+				break;
+			case JsBoolean:
+				bool bBool;
+				JsBooleanToBool(arg, &bBool);
+				wprintf(bBool ? L"true" : L"false");
+				break;
+			default:
+				break;
+		}
+
+		wprintf(L" ");
 	}
 
 	wprintf(L"\n");
