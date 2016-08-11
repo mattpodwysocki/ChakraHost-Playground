@@ -12,4 +12,5 @@ private:
 	unsigned currentSourceContext;
 	JsRuntimeHandle runtime;
 	JsContextRef context;
+	JsValueRef globalObject;
 };
