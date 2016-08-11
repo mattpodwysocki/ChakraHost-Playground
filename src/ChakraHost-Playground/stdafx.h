@@ -12,6 +12,13 @@
 #include <stdio.h>
 #include <tchar.h>
 
-
+#define IfFailRet(v) \
+    { \
+        JsErrorCode error = (v); \
+        if (error != JsNoError) \
+        { \
+            return error; \
+        } \
+    }
 
 // TODO: reference additional headers your program requires here
