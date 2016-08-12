@@ -70,6 +70,52 @@ JsValueRef CALLBACK ConsoleError(JsValueRef callee, bool isConstructCall, JsValu
 	return InvokeConsole(L"error", callee, isConstructCall, arguments, argumentCount, callbackState);
 };
 
+JsErrorCode ChakraHost::RunScriptFromFile(const wchar_t* szFileName, const wchar_t* szSourceUri, JsValueRef* result)
+{
+	JsErrorCode status = JsNoError;
+	FILE *file;
+
+	if (_wfopen_s(&file, szFileName, L"rb"))
+	{
+		return JsErrorInvalidArgument;
+	}
+
+	unsigned int current = ftell(file);
+	fseek(file, 0, SEEK_END);
+	unsigned int end = ftell(file);
+	fseek(file, current, SEEK_SET);
+	unsigned int lengthBytes = end - current;
+	char *rawBytes = (char *)calloc(lengthBytes + 1, sizeof(char));
+
+	if (rawBytes == nullptr)
+	{
+		return JsErrorFatal;
+	}
+
+	fread((void *)rawBytes, sizeof(char), lengthBytes, file);
+
+	wchar_t *contents = (wchar_t *)calloc(lengthBytes + 1, sizeof(wchar_t));
+	if (contents == nullptr)
+	{
+		free(rawBytes);
+		return JsErrorFatal;
+	}
+
+	if (MultiByteToWideChar(CP_UTF8, 0, rawBytes, lengthBytes + 1, contents, lengthBytes + 1) == 0)
+	{
+		free(rawBytes);
+		free(contents);
+		return JsErrorFatal;
+	}
+
+	status = RunScript(contents, szSourceUri, result);
+
+	free(rawBytes);
+	free(contents);
+
+	return status;
+}
+
 JsErrorCode ChakraHost::RunScript(const wchar_t* szScript, const wchar_t* szSourceUri, JsValueRef* result)
 {
 	return JsRunScript(szScript, currentSourceContext++, szSourceUri, result);

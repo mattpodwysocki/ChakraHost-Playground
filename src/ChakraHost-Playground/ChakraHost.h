@@ -9,6 +9,7 @@ public:
 	JsErrorCode Destroy();
 
 	JsErrorCode RunScript(const wchar_t* szScript, const wchar_t* szSourceUri, JsValueRef* result);
+	JsErrorCode RunScriptFromFile(const wchar_t* szFileName, const wchar_t* szSourceUri, JsValueRef* result);
 	JsErrorCode JsonStringify(JsValueRef argument, JsValueRef* result);
 	JsErrorCode JsonParse(JsValueRef argument, JsValueRef* result);
 private:
