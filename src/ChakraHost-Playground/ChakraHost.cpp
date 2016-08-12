@@ -25,6 +25,8 @@ JsErrorCode DefineHostCallback(JsValueRef globalObject, const wchar_t *callbackN
 
 JsValueRef InvokeConsole(const wchar_t* kind, JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState)
 {
+#ifdef _DEBUG
+
 	wprintf(L"[JS {%s}] ", kind);
 
 	// First argument is this-context, ignore...
@@ -42,6 +44,8 @@ JsValueRef InvokeConsole(const wchar_t* kind, JsValueRef callee, bool isConstruc
 	}
 
 	wprintf(L"\n");
+
+#endif
 
 	return JS_INVALID_REFERENCE;
 };
