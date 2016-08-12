@@ -8,8 +8,7 @@ public:
 	JsErrorCode Init();
 	JsErrorCode Destroy();
 
-	JsErrorCode JsonStringify(JsValueRef* arguments, JsValueRef* result);
-
+	JsErrorCode RunScript(const wchar_t* szScript, const wchar_t* szSourceUri, JsValueRef* result);
 private:
 	JsErrorCode InitJson();
 	JsErrorCode InitConsole();

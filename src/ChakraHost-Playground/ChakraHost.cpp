@@ -9,7 +9,7 @@ void ThrowException(const wchar_t* szException)
 	JsPointerToString(szException, wcslen(szException), &errorValue);
 	JsCreateError(errorValue, &errorObject);
 	JsSetException(errorObject);
-}
+};
 
 JsErrorCode DefineHostCallback(JsValueRef globalObject, const wchar_t *callbackName, JsNativeFunction callback, void *callbackState)
 {
@@ -25,7 +25,6 @@ JsErrorCode DefineHostCallback(JsValueRef globalObject, const wchar_t *callbackN
 
 JsValueRef InvokeConsole(const wchar_t* kind, JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState)
 {
-	ChakraHost* self = (ChakraHost*)callbackState;
 	wprintf(L"[JS {%s}] ", kind);
 
 	// First argument is this-context, ignore...
@@ -40,7 +39,6 @@ JsValueRef InvokeConsole(const wchar_t* kind, JsValueRef callee, bool isConstruc
 		size_t szBufLen;
 		IfFailThrow(JsStringToPointer(resultJSString, &szBuf, &szBufLen), L"Failed to get string from pointer.");
 		wprintf(L"%s ", szBuf);
-		delete[] szBuf;
 	}
 
 	wprintf(L"\n");
@@ -68,9 +66,9 @@ JsValueRef CALLBACK ConsoleError(JsValueRef callee, bool isConstructCall, JsValu
 	return InvokeConsole(L"error", callee, isConstructCall, arguments, argumentCount, callbackState);
 };
 
-JsErrorCode ChakraHost::JsonStringify(JsValueRef* arguments, JsValueRef* result)
+JsErrorCode ChakraHost::RunScript(const wchar_t* szScript, const wchar_t* szSourceUri, JsValueRef* result)
 {
-	return JsCallFunction(jsonStringifyObject, arguments, 1, result);
+	return JsRunScript(szScript, currentSourceContext++, szSourceUri, result);
 };
 
 JsErrorCode ChakraHost::InitJson()
