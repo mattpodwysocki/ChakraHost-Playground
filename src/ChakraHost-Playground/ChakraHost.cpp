@@ -27,15 +27,15 @@ JsValueRef InvokeConsole(const wchar_t* kind, JsValueRef callee, bool isConstruc
 {
 #ifdef _DEBUG
 
+	ChakraHost* self = (ChakraHost*)callbackState;
+
 	wprintf(L"[JS {%s}] ", kind);
 
 	// First argument is this-context, ignore...
 	for (USHORT i = 1; i < argumentCount; i++)
 	{
-		JsValueRef arg = arguments[i];
-
 		JsValueRef resultJSString;
-		IfFailThrow(JsConvertValueToString(arg, &resultJSString), L"Failed to convert to string.");
+		IfFailThrow(self->JsonStringify(arguments[i], &resultJSString), L"JSON.stringify failed.");
 
 		const wchar_t* szBuf;
 		size_t szBufLen;
@@ -75,6 +75,20 @@ JsErrorCode ChakraHost::RunScript(const wchar_t* szScript, const wchar_t* szSour
 	return JsRunScript(szScript, currentSourceContext++, szSourceUri, result);
 };
 
+JsErrorCode ChakraHost::JsonStringify(JsValueRef argument, JsValueRef* result)
+{
+	JsValueRef args[2] = { globalObject, argument };
+	IfFailRet(JsCallFunction(jsonStringifyObject, args, 2, result));
+	return JsNoError;
+};
+
+JsErrorCode ChakraHost::JsonParse(JsValueRef argument, JsValueRef* result)
+{
+	JsValueRef args[2] = { globalObject, argument };
+	IfFailRet(JsCallFunction(jsonParseObject, args, 2, result));
+	return JsNoError;
+};
+
 JsErrorCode ChakraHost::InitJson()
 {
 	JsPropertyIdRef jsonPropertyId;
@@ -110,6 +124,13 @@ JsErrorCode ChakraHost::InitConsole()
 	return JsNoError;
 };
 
+JsErrorCode ChakraHost::InitRequire()
+{
+	JsPropertyIdRef requirePropertyId;
+	IfFailRet(JsGetPropertyIdFromName(L"require", &requirePropertyId));
+	IfFailRet(JsGetProperty(globalObject, requirePropertyId, &requireObject));
+};
+
 JsErrorCode ChakraHost::Init()
 {
 	currentSourceContext = 0;
@@ -122,6 +143,7 @@ JsErrorCode ChakraHost::Init()
 
 	IfFailRet(InitJson());
 	IfFailRet(InitConsole());
+	IfFailRet(InitRequire());
 
 	return JsNoError;
 };
