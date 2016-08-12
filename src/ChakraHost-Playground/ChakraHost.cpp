@@ -48,18 +48,27 @@ JsValueRef InvokeConsole(const wchar_t* kind, JsValueRef callee, bool isConstruc
 				wprintf(bBool ? L"true" : L"false");
 				break;
 			case JsNumber:
+				double jsNumResult;
+				JsNumberToDouble(arg, &jsNumResult);
+				wprintf(L"%f", jsNumResult);
+				break;
 			case JsString:
-				JsValueRef jsArgs[1] = { arg };
-				JsValueRef jsResult;
-				IfFailThrow(self->JsonStringify(jsArgs, &jsResult), L"JSON.stringify failed");
-				
-				wchar_t* szBuf = NULL;
+				const wchar_t* szBuf;
 				size_t szBufLen;
-				IfFailThrow(JsStringToPointer(jsResult, &szBuf, &szBufLen), L"Failed to get string from JSON.stringify");
+				IfFailThrow(JsStringToPointer(arg, &szBuf, &szBufLen), L"Failed to get string from JSON.stringify");
 				wprintf(szBuf);
 				delete[] szBuf;
 				break;
-			default:
+			case JsObject:
+				JsValueRef jsArgs[1] = { arg };
+				JsValueRef jsResult;
+				IfFailThrow(self->JsonStringify(jsArgs, &jsResult), L"JSON.stringify failed");
+
+				const wchar_t* szJsBuff;
+				size_t szJsBufLen;
+				IfFailThrow(JsStringToPointer(jsResult, &szJsBuff, &szJsBufLen), L"Failed to get string from JSON.stringify");
+				wprintf(szBuf);
+				delete[] szBuf;
 				break;
 		}
 
