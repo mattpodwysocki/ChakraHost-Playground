@@ -57,6 +57,7 @@ JsValueRef InvokeConsole(const wchar_t* kind, JsValueRef callee, bool isConstruc
 				size_t szBufLen;
 				IfFailThrow(JsStringToPointer(jsResult, &szBuf, &szBufLen), L"Failed to get string from JSON.stringify");
 				wprintf(szBuf);
+				delete[] szBuf;
 				break;
 			default:
 				break;
