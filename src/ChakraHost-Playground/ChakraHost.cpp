@@ -121,6 +121,58 @@ JsErrorCode ChakraHost::RunScript(const wchar_t* szScript, const wchar_t* szSour
 	return JsRunScript(szScript, currentSourceContext++, szSourceUri, result);
 };
 
+JsErrorCode ChakraHost::CallModuleMethod(const wchar_t* szModule, const wchar_t* szMethod, JsValueRef* arguments, size_t argumentsLength, JsValueRef* result)
+{
+	JsPropertyIdRef modulePropertyId;
+	IfFailRet(JsGetPropertyIdFromName(szModule, &modulePropertyId));
+
+	JsValueRef moduleObject;
+	IfFailRet(JsGetProperty(globalObject, modulePropertyId, &moduleObject));
+
+	JsValueType moduleType;
+	IfFailRet(JsGetValueType(moduleObject, &moduleType));
+
+	// Call require to load function
+	if (moduleType != JsObject)
+	{
+		JsValueRef moduleString;
+		IfFailRet(JsPointerToString(szModule, wcslen(szModule), &moduleString));
+		JsValueRef requireArguments[2] = { globalObject, moduleString };
+		IfFailRet(JsCallFunction(requireObject, requireArguments, 2, &moduleObject));
+	}
+
+	JsPropertyIdRef methodPropertyId;
+	IfFailRet(JsGetPropertyIdFromName(szMethod, &methodPropertyId));
+
+	JsValueRef methodObject;
+	IfFailRet(JsGetProperty(moduleObject, methodPropertyId, &methodObject));
+
+	size_t callArgsLength = argumentsLength + 1;
+	JsValueRef arg;
+	JsValueRef* callArguments = new JsValueRef[callArgsLength];
+	callArguments[0] = globalObject;
+	for (size_t i = 0; i < argumentsLength; i++)
+	{
+		arg = arguments[i];
+		UINT jsAddRefCount;
+		IfFailRet(JsAddRef(arg, &jsAddRefCount));
+		callArguments[i + 1] = arg;
+	}
+
+	IfFailRet(JsCallFunction(methodObject, callArguments, callArgsLength, result));
+
+	for (size_t i = i; i < callArgsLength; i++)
+	{
+		arg = callArguments[i];
+		UINT jsReleaseRefCount;
+		IfFailRet(JsRelease(arg, &jsReleaseRefCount));
+	}
+
+	delete[] callArguments;
+
+	return JsNoError;
+};
+
 JsErrorCode ChakraHost::JsonStringify(JsValueRef argument, JsValueRef* result)
 {
 	JsValueRef args[2] = { globalObject, argument };
