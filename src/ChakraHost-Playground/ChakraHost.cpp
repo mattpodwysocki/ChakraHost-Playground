@@ -25,6 +25,7 @@ JsErrorCode DefineHostCallback(JsValueRef globalObject, const wchar_t *callbackN
 
 JsValueRef InvokeConsole(const wchar_t* kind, JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState)
 {
+	ChakraHost* self = (ChakraHost*)callbackState;
 	wprintf(L"[JS {%s}]", kind);
 
 	for (USHORT i = 1; i < argumentCount; i++)
@@ -41,14 +42,21 @@ JsValueRef InvokeConsole(const wchar_t* kind, JsValueRef callee, bool isConstruc
 			case JsNull:
 				wprintf(L"null");
 				break;
-			case JsNumber:
-				break;				break;
-			case JsString:
-				break;
 			case JsBoolean:
 				bool bBool;
 				JsBooleanToBool(arg, &bBool);
 				wprintf(bBool ? L"true" : L"false");
+				break;
+			case JsNumber:
+			case JsString:
+				JsValueRef jsArgs[1] = { arg };
+				JsValueRef jsResult;
+				IfFailThrow(self->JsonStringify(jsArgs, &jsResult), L"JSON.stringify failed");
+				
+				wchar_t* szBuf = NULL;
+				size_t szBufLen;
+				IfFailThrow(JsStringToPointer(jsResult, &szBuf, &szBufLen), L"Failed to get string from JSON.stringify");
+				wprintf(szBuf);
 				break;
 			default:
 				break;
@@ -82,15 +90,25 @@ JsValueRef CALLBACK ConsoleError(JsValueRef callee, bool isConstructCall, JsValu
 	return InvokeConsole(L"error", callee, isConstructCall, arguments, argumentCount, callbackState);
 };
 
-JsErrorCode ChakraHost::InitJsonParse()
+JsErrorCode ChakraHost::JsonStringify(JsValueRef* arguments, JsValueRef* result)
+{
+	return JsCallFunction(jsonStringifyObject, arguments, 1, result);
+};
+
+JsErrorCode ChakraHost::InitJson()
 {
 	JsPropertyIdRef jsonPropertyId;
 	IfFailRet(JsGetPropertyIdFromName(L"JSON", &jsonPropertyId));
 	JsValueRef jsonObject;
 	IfFailRet(JsGetProperty(globalObject, jsonPropertyId, &jsonObject));
+	
 	JsPropertyIdRef jsonParseId;
 	IfFailRet(JsGetPropertyIdFromName(L"parse", &jsonParseId));
 	IfFailRet(JsGetProperty(jsonObject, jsonParseId, &jsonParseObject));
+
+	JsPropertyIdRef jsonStringifyId;
+	IfFailRet(JsGetPropertyIdFromName(L"stringify", &jsonStringifyId));
+	IfFailRet(JsGetProperty(jsonObject, jsonStringifyId, &jsonStringifyObject));
 
 	return JsNoError;
 };
@@ -122,7 +140,7 @@ JsErrorCode ChakraHost::Init()
 	
 	IfFailRet(JsGetGlobalObject(&globalObject));
 
-	IfFailRet(InitJsonParse());
+	IfFailRet(InitJson());
 	IfFailRet(InitConsole());
 
 	return JsNoError;

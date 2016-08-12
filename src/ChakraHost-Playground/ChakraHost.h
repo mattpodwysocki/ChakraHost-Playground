@@ -8,8 +8,10 @@ public:
 	JsErrorCode Init();
 	JsErrorCode Destroy();
 
+	JsErrorCode JsonStringify(JsValueRef* arguments, JsValueRef* result);
+
 private:
-	JsErrorCode InitJsonParse();
+	JsErrorCode InitJson();
 	JsErrorCode InitConsole();
 
 	unsigned currentSourceContext;
@@ -17,4 +19,5 @@ private:
 	JsContextRef context;
 	JsValueRef globalObject;
 	JsValueRef jsonParseObject;
+	JsValueRef jsonStringifyObject;
 };
