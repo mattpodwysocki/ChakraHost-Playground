@@ -121,7 +121,7 @@ JsErrorCode ChakraHost::RunScript(const wchar_t* szScript, const wchar_t* szSour
 	return JsRunScript(szScript, currentSourceContext++, szSourceUri, result);
 };
 
-JsErrorCode ChakraHost::CallModuleMethod(const wchar_t* szModule, const wchar_t* szMethod, JsValueRef* arguments, size_t argumentsLength, JsValueRef* result)
+JsErrorCode ChakraHost::CallModuleMethod(const wchar_t* szModule, const wchar_t* szMethod, JsValueRef* arguments, USHORT argumentsLength, JsValueRef* result)
 {
 	JsPropertyIdRef modulePropertyId;
 	IfFailRet(JsGetPropertyIdFromName(szModule, &modulePropertyId));
@@ -147,11 +147,11 @@ JsErrorCode ChakraHost::CallModuleMethod(const wchar_t* szModule, const wchar_t*
 	JsValueRef methodObject;
 	IfFailRet(JsGetProperty(moduleObject, methodPropertyId, &methodObject));
 
-	size_t callArgsLength = argumentsLength + 1;
+	USHORT callArgsLength = argumentsLength + 1;
 	JsValueRef arg;
 	JsValueRef* callArguments = new JsValueRef[callArgsLength];
 	callArguments[0] = globalObject;
-	for (size_t i = 0; i < argumentsLength; i++)
+	for (USHORT i = 0; i < argumentsLength; i++)
 	{
 		arg = arguments[i];
 		UINT jsAddRefCount;
@@ -161,7 +161,7 @@ JsErrorCode ChakraHost::CallModuleMethod(const wchar_t* szModule, const wchar_t*
 
 	IfFailRet(JsCallFunction(methodObject, callArguments, callArgsLength, result));
 
-	for (size_t i = i; i < callArgsLength; i++)
+	for (USHORT i = 1; i < callArgsLength; i++)
 	{
 		arg = callArguments[i];
 		UINT jsReleaseRefCount;
@@ -186,6 +186,22 @@ JsErrorCode ChakraHost::JsonParse(JsValueRef argument, JsValueRef* result)
 	IfFailRet(JsCallFunction(jsonParseObject, args, 2, result));
 	return JsNoError;
 };
+
+JsErrorCode ChakraHost::GetGlobalVariable(const wchar_t* szPropertyName, JsValueRef* result)
+{
+	JsPropertyIdRef globalVarId;
+	IfFailRet(JsGetPropertyIdFromName(szPropertyName, &globalVarId));
+	IfFailRet(JsGetProperty(globalObject, globalVarId, result));
+	return JsNoError;
+}
+
+JsErrorCode ChakraHost::SetGlobalVariable(const wchar_t* szPropertyName, JsValueRef value)
+{
+	JsPropertyIdRef globalVarId;
+	IfFailRet(JsGetPropertyIdFromName(szPropertyName, &globalVarId));
+	IfFailRet(JsSetProperty(globalObject, globalVarId, value, true));
+	return JsNoError;
+}
 
 JsErrorCode ChakraHost::InitJson()
 {
@@ -227,6 +243,8 @@ JsErrorCode ChakraHost::InitRequire()
 	JsPropertyIdRef requirePropertyId;
 	IfFailRet(JsGetPropertyIdFromName(L"require", &requirePropertyId));
 	IfFailRet(JsGetProperty(globalObject, requirePropertyId, &requireObject));
+
+	return JsNoError;
 };
 
 JsErrorCode ChakraHost::Init()
