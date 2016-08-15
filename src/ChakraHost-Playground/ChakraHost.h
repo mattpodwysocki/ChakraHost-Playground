@@ -18,6 +18,8 @@ public:
 
 	JsErrorCode GetGlobalVariable(const wchar_t* szPropertyName, JsValueRef* result);
 	JsErrorCode SetGlobalVariable(const wchar_t* szPropertyName, JsValueRef value);
+
+	JsValueRef globalObject;
 private:
 	JsErrorCode InitJson();
 	JsErrorCode InitConsole();
@@ -26,7 +28,6 @@ private:
 	unsigned currentSourceContext;
 	JsRuntimeHandle runtime;
 	JsContextRef context;
-	JsValueRef globalObject;
 	JsValueRef requireObject;
 	JsValueRef jsonParseObject;
 	JsValueRef jsonStringifyObject;
