@@ -12,6 +12,15 @@
 #include <stdio.h>
 #include <tchar.h>
 
+#define IfFailCleanup(v) \
+    { \
+        status = (v); \
+        if (status != JsNoError) \
+        { \
+            goto cleanup; \
+        } \
+    }
+
 #define IfFailRet(v) \
     { \
         JsErrorCode error = (v); \

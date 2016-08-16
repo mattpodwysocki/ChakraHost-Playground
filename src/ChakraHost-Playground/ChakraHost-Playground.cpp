@@ -72,45 +72,45 @@ int main()
 	// Console logs empty object
 	JsValueRef result;
 	const wchar_t* szScript = L"(() => { return function(x, y) { console.log(arguments); return x + y; }; })()";
-	status = host.RunScript(szScript, L"", &result);
+	IfFailCleanup(host.RunScript(szScript, L"", &result));
 
+	// Get the function instance.apply
 	JsPropertyIdRef applyId;
-	status = JsGetPropertyIdFromName(L"apply", &applyId);
+	IfFailCleanup(JsGetPropertyIdFromName(L"apply", &applyId));
 
 	JsValueRef applyObj;
-	status = JsGetProperty(result, applyId, &applyObj);
+	IfFailCleanup(JsGetProperty(result, applyId, &applyObj));
 
 	JsValueRef args;
-	status = host.RunScript(L"(() => [1,2])()", L"", &args);
+	IfFailCleanup(host.RunScript(L"(() => [1,2])()", L"", &args));
 
 	JsValueRef argsArray;
-	status = JsCreateArray(2, &argsArray);
-
-	JsPropertyIdRef arg0Id, arg1Id;
+	IfFailCleanup(JsCreateArray(2, &argsArray));
+/*
 	JsValueRef arg0, arg1;
 	JsValueRef arg0Val, arg1Val;
-	JsGetPropertyIdFromName(L"0", &arg0Id);
-	JsGetPropertyIdFromName(L"1", &arg1Id);
-	JsGetProperty(argsArray, arg0Id, &arg0);
-	JsGetProperty(argsArray, arg1Id, &arg1);
+	JsIntToNumber(0, &arg0);
+	JsIntToNumber(1, &arg1);
 	JsIntToNumber(42, &arg0Val);
 	JsIntToNumber(56, &arg1Val);
 
 	JsSetIndexedProperty(argsArray, arg0, arg0Val);
 	JsSetIndexedProperty(argsArray, arg1, arg1Val);
+*/
+	JsValueRef nullObj;
+	IfFailCleanup(JsGetNullValue(&nullObj));
 
-	JsValueRef argObj[2] = { result , argsArray };
+	JsValueRef argObj[3] = { result , nullObj, args };
 	JsValueRef returnObj;
-	status = JsCallFunction(applyObj, argObj, 2, &returnObj);
+	IfFailCleanup(JsCallFunction(applyObj, argObj, 3, &returnObj));
 
 	JsValueRef stringObj;
-	status = JsConvertValueToString(returnObj, &stringObj);
+	IfFailCleanup(JsConvertValueToString(returnObj, &stringObj));
 
 	const wchar_t* szBuf;
 	size_t bufLen;
-	status = JsStringToPointer(stringObj, &szBuf, &bufLen);
+	IfFailCleanup(JsStringToPointer(stringObj, &szBuf, &bufLen));
 
-	// Prints out NaN
 	wprintf(L"Result: %s", szBuf);
 cleanup:
 
