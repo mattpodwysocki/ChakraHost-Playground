@@ -69,29 +69,49 @@ int SerializeScript()
         goto cleanup;
     }
 
-    const wchar_t* szFile = L"foo.js";
-    const wchar_t* szSerializedFile = L"foo.bin";
-    const wchar_t* szScript = L"(() => { return function add(x, y) { return x + y; }; })()";
+    const wchar_t* szFile = L"lodash.js";
+    const wchar_t* szSerializedFile = L"lodash.bin";
 
-    FILE* file = NULL;
-    _wfopen_s(&file, szFile, L"wb");
-    fwrite(szScript, sizeof(wchar_t), wcslen(szScript), file);
-    fclose(file);
+    JsValueRef lodash;
+    IfFailCleanup(host.SerializeScriptFromFile(szFile, szSerializedFile));
+    IfFailCleanup(host.RunSerializedScriptFromFile(szSerializedFile, szFile, L"", &lodash));
+
+    JsPropertyIdRef lodashId;
+    JsValueRef lodashObj;
+    IfFailCleanup(JsGetPropertyIdFromName(L"_", &lodashId));
+    IfFailCleanup(JsGetProperty(host.globalObject, lodashId, &lodashObj));
+
+    JsPropertyIdRef addId;
+    IfFailCleanup(JsGetPropertyIdFromName(L"add", &addId));
 
     JsValueRef addFunction;
-    IfFailCleanup(host.SerializeScript(szScript, szSerializedFile));
-    IfFailCleanup(host.RunSerializedScriptFromFile(szSerializedFile, szFile, L"", &addFunction));
+    IfFailCleanup(JsGetProperty(lodashObj, addId, &addFunction));
 
     JsValueRef arg1, arg2, result;
     IfFailCleanup(JsIntToNumber(12, &arg1));
     IfFailCleanup(JsIntToNumber(34, &arg2));
-    JsValueRef args[] = { host.globalObject, arg1, arg2 };
+    JsValueRef args[] = { lodashObj, arg1, arg2 };
     IfFailCleanup(JsCallFunction(addFunction, args, 3, &result));
 
-    int resultInt;
-    IfFailCleanup(JsNumberToInt(result, &resultInt));
-    
-    wprintf(L"Result: %d", resultInt);
+    double resultValue;
+    IfFailCleanup(JsNumberToDouble(result, &resultValue));
+
+    wprintf(L"Result: %f\n", resultValue);
+
+    JsValueRef scriptResult;
+    const wchar_t* szScript = L"(() => { return function add(x, y) { console.log(x, y, _, _.add); return _.add(x, y); }; })();";
+    IfFailRet(host.RunScript(szScript, L"", &scriptResult));
+
+    JsValueRef addResult;
+    JsValueRef addArgs[] = { host.globalObject, arg1, arg2 };
+    IfFailRet(JsCallFunction(scriptResult, addArgs, 3, &addResult));
+
+    int addResultInt;
+    IfFailCleanup(JsNumberToInt(addResult, &addResultInt));
+
+    wprintf(L"Add result: %d\n", addResultInt);
+
+    system("pause");
 cleanup:
     status = host.Destroy();
     if (status != JsNoError)

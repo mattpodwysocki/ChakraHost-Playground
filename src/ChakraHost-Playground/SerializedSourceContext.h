@@ -10,7 +10,11 @@ struct SerializedSourceContext
 
     ~SerializedSourceContext()
     {
-        delete[] byteCode;
+        if (byteCode)
+        {
+            delete[] byteCode;
+        }
+
         if (scriptBuffer)
         {
             delete[] scriptBuffer;

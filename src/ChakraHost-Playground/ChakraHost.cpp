@@ -24,6 +24,38 @@ JsErrorCode DefineHostCallback(JsValueRef globalObject, const wchar_t *callbackN
     return JsNoError;
 };
 
+JsErrorCode Stringify(JsValueRef value, ChakraHost* self, const wchar_t** szResult, size_t* sResult)
+{
+    JsValueType type;
+    IfFailRet(JsGetValueType(value, &type));
+
+    switch (type)
+    {
+        case JsUndefined:
+        case JsNull:
+        case JsNumber:
+        case JsString:
+        case JsBoolean:
+        case JsObject:
+        case JsArray:
+        case JsTypedArray:
+            JsValueRef resultJSON;
+            IfFailRet(self->JsonStringify(value, &resultJSON));
+            IfFailRet(JsStringToPointer(resultJSON, szResult, sResult));
+            break;
+        case JsFunction:
+        case JsError:
+        case JsSymbol:
+        case JsArrayBuffer:
+            JsValueRef resultString;
+            IfFailRet(JsConvertValueToString(value, &resultString));
+            IfFailRet(JsStringToPointer(resultString, szResult, sResult));
+            break;
+    }
+
+    return JsNoError;
+}
+
 JsValueRef InvokeConsole(const wchar_t* kind, JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState)
 {
 #ifdef _DEBUG
@@ -36,12 +68,9 @@ JsValueRef InvokeConsole(const wchar_t* kind, JsValueRef callee, bool isConstruc
     // First argument is this-context, ignore...
     for (USHORT i = 1; i < argumentCount; i++)
     {
-        JsValueRef resultJSString;
-        IfFailThrow(self->JsonStringify(arguments[i], &resultJSString), L"JSON.stringify failed.");
-
         const wchar_t* szBuf;
         size_t szBufLen;
-        IfFailThrow(JsStringToPointer(resultJSString, &szBuf, &szBufLen), L"Failed to get string from pointer.");
+        IfFailThrow(Stringify(arguments[i], self, &szBuf, &szBufLen), L"Failed to convert object to string");
 
         OutputDebugStringW(szBuf);
         OutputDebugStringW(L" ");
