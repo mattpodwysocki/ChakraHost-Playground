@@ -57,69 +57,119 @@ cleanup:
 	return status;
 }
 
-int main()
+int SerializeScript()
 {
-	ChakraHost host;
-	JsErrorCode status = JsNoError;
+    ChakraHost host;
+    JsErrorCode status = JsNoError;
 
-	status = host.Init();
-	if (status != JsNoError)
-	{
-		wprintf(L"Error in initializing runtime\n");
-		return status;
-	}
+    status = host.Init();
+    if (status != JsNoError)
+    {
+        wprintf(L"Error in initializing runtime\n");
+        goto cleanup;
+    }
 
-	// Console logs empty object
-	JsValueRef result;
-	const wchar_t* szScript = L"(() => { return function(x, y) { console.log(arguments); return x + y; }; })()";
-	IfFailCleanup(host.RunScript(szScript, L"", &result));
+    const wchar_t* szFile = L"foo.js";
+    const wchar_t* szSerializedFile = L"foo.bin";
+    const wchar_t* szScript = L"(() => { return function add(x, y) { return x + y; }; })()";
 
-	// Get the function instance.apply
-	JsPropertyIdRef applyId;
-	IfFailCleanup(JsGetPropertyIdFromName(L"apply", &applyId));
+    FILE* file = NULL;
+    _wfopen_s(&file, szFile, L"wb");
+    fwrite(szScript, sizeof(wchar_t), wcslen(szScript), file);
+    fclose(file);
 
-	JsValueRef applyObj;
-	IfFailCleanup(JsGetProperty(result, applyId, &applyObj));
+    JsValueRef addFunction;
+    IfFailCleanup(host.SerializeScript(szScript, szSerializedFile));
+    IfFailCleanup(host.RunSerializedScriptFromFile(szSerializedFile, szFile, L"", &addFunction));
 
-	JsValueRef args;
-	IfFailCleanup(host.RunScript(L"(() => [1,2])()", L"", &args));
+    JsValueRef arg1, arg2, result;
+    IfFailCleanup(JsIntToNumber(12, &arg1));
+    IfFailCleanup(JsIntToNumber(34, &arg2));
+    JsValueRef args[] = { host.globalObject, arg1, arg2 };
+    IfFailCleanup(JsCallFunction(addFunction, args, 3, &result));
 
-	JsValueRef argsArray;
-	IfFailCleanup(JsCreateArray(2, &argsArray));
-/*
-	JsValueRef arg0, arg1;
-	JsValueRef arg0Val, arg1Val;
-	JsIntToNumber(0, &arg0);
-	JsIntToNumber(1, &arg1);
-	JsIntToNumber(42, &arg0Val);
-	JsIntToNumber(56, &arg1Val);
+    int resultInt;
+    IfFailCleanup(JsNumberToInt(result, &resultInt));
+    
+    wprintf(L"Result: %d", resultInt);
+cleanup:
+    status = host.Destroy();
+    if (status != JsNoError)
+    {
+        wprintf(L"Error in destroying runtime");
+    }
 
-	JsSetIndexedProperty(argsArray, arg0, arg0Val);
-	JsSetIndexedProperty(argsArray, arg1, arg1Val);
-*/
-	JsValueRef nullObj;
-	IfFailCleanup(JsGetNullValue(&nullObj));
+    return status;
+}
 
-	JsValueRef argObj[3] = { result , nullObj, args };
-	JsValueRef returnObj;
-	IfFailCleanup(JsCallFunction(applyObj, argObj, 3, &returnObj));
+int CallApply()
+{
+    ChakraHost host;
+    JsErrorCode status = JsNoError;
 
-	JsValueRef stringObj;
-	IfFailCleanup(JsConvertValueToString(returnObj, &stringObj));
+    status = host.Init();
+    if (status != JsNoError)
+    {
+        wprintf(L"Error in initializing runtime\n");
+        return status;
+    }
 
-	const wchar_t* szBuf;
-	size_t bufLen;
-	IfFailCleanup(JsStringToPointer(stringObj, &szBuf, &bufLen));
+    // Console logs empty object
+    JsValueRef result;
+    const wchar_t* szScript = L"(() => { return function add(x, y) { return x + y; }; })()";
+    IfFailCleanup(host.RunScript(szScript, L"", &result));
 
-	wprintf(L"Result: %s", szBuf);
+    // Get the function instance.apply
+    JsPropertyIdRef applyId;
+    IfFailCleanup(JsGetPropertyIdFromName(L"apply", &applyId));
+
+    JsValueRef applyObj;
+    IfFailCleanup(JsGetProperty(result, applyId, &applyObj));
+
+    JsValueRef args;
+    IfFailCleanup(host.RunScript(L"(() => [1,2])()", L"", &args));
+
+    JsValueRef argsArray;
+    IfFailCleanup(JsCreateArray(2, &argsArray));
+    /*
+    JsValueRef arg0, arg1;
+    JsValueRef arg0Val, arg1Val;
+    JsIntToNumber(0, &arg0);
+    JsIntToNumber(1, &arg1);
+    JsIntToNumber(42, &arg0Val);
+    JsIntToNumber(56, &arg1Val);
+
+    JsSetIndexedProperty(argsArray, arg0, arg0Val);
+    JsSetIndexedProperty(argsArray, arg1, arg1Val);
+    */
+    JsValueRef nullObj;
+    IfFailCleanup(JsGetNullValue(&nullObj));
+
+    JsValueRef argObj[3] = { result , nullObj, args };
+    JsValueRef returnObj;
+    IfFailCleanup(JsCallFunction(applyObj, argObj, 3, &returnObj));
+
+    JsValueRef stringObj;
+    IfFailCleanup(JsConvertValueToString(returnObj, &stringObj));
+
+    const wchar_t* szBuf;
+    size_t bufLen;
+    IfFailCleanup(JsStringToPointer(stringObj, &szBuf, &bufLen));
+
+    wprintf(L"Result: %s", szBuf);
 cleanup:
 
-	status = host.Destroy();
-	if (status != JsNoError)
-	{
-		wprintf(L"Error in destroying runtime");
-	}
+    status = host.Destroy();
+    if (status != JsNoError)
+    {
+        wprintf(L"Error in destroying runtime");
+    }
 
-	return status;
+    return status;
+}
+
+int main()
+{
+    return SerializeScript();
 }
 
