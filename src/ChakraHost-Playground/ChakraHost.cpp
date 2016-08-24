@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "ChakraHost.h"
 #include "SerializedSourceContext.h"
+#include "asprintf.h"
 
 void ThrowException(const wchar_t* szException)
 {
@@ -24,7 +25,7 @@ JsErrorCode DefineHostCallback(JsValueRef globalObject, const wchar_t *callbackN
     return JsNoError;
 };
 
-JsErrorCode Stringify(JsValueRef value, ChakraHost* self, const wchar_t** szResult, size_t* sResult)
+JsErrorCode Stringify(JsValueRef value, ChakraHost* self)
 {
     JsValueType type;
     IfFailRet(JsGetValueType(value, &type));
@@ -32,24 +33,95 @@ JsErrorCode Stringify(JsValueRef value, ChakraHost* self, const wchar_t** szResu
     switch (type)
     {
         case JsUndefined:
+            OutputDebugStringW(L"undefined");
+            break;
         case JsNull:
-        case JsNumber:
-        case JsString:
+            OutputDebugStringW(L"null");
+            break;
         case JsBoolean:
+            bool bResult;
+            IfFailRet(JsBooleanToBool(value, &bResult));
+            OutputDebugStringW(bResult ? L"true" : L"false");
+            break;
+        case JsString:
+            const wchar_t* szResult;
+            size_t sResult;
+            IfFailRet(JsStringToPointer(value, &szResult, &sResult));
+            OutputDebugStringW(szResult);
+            break;
         case JsObject:
+            JsValueRef props;
+            IfFailRet(JsGetOwnPropertyNames(value, &props));
+
+            JsPropertyIdRef lengthId;
+            JsValueRef lengthProp;
+            int lengthValue;
+            IfFailRet(JsGetPropertyIdFromName(L"length", &lengthId));
+            IfFailRet(JsGetProperty(props, lengthId, &lengthProp));
+            IfFailRet(JsNumberToInt(lengthProp, &lengthValue));
+
+            OutputDebugStringW(L"{ ");
+
+            for (int i = 0; i < lengthValue; i++)
+            {
+                JsPropertyIdRef propId;
+                JsValueRef index, indexResult, prop;
+                const wchar_t* szProp;
+                size_t sProp;
+                IfFailRet(JsIntToNumber(i, &index));
+                IfFailRet(JsGetIndexedProperty(props, index, &indexResult));
+                IfFailRet(JsStringToPointer(indexResult, &szProp, &sProp));
+                IfFailRet(JsGetPropertyIdFromName(szProp, &propId));
+                IfFailRet(JsGetProperty(value, propId, &prop));
+
+                OutputDebugStringW(szProp);
+                OutputDebugStringW(L": ");
+                IfFailRet(Stringify(prop, self));
+                OutputDebugStringW(L" ");
+            }
+
+            OutputDebugStringW(L"}");
+            break;
+        case JsFunction:
+            JsPropertyIdRef nameId;
+            JsValueRef nameObj;
+            const wchar_t* szName;
+            size_t sName;
+
+            IfFailRet(JsGetPropertyIdFromName(L"name", &nameId));
+            IfFailRet(JsGetProperty(value, nameId, &nameObj));
+            IfFailRet(JsStringToPointer(nameObj, &szName, &sName));
+            
+            OutputDebugStringW(L"[Function");
+            if (sName > 0)
+            {
+                wchar_t* szFn = NULL;
+                _aswprintf(&szFn, L": %s", szName);
+                OutputDebugStringW(szFn);
+                free(szFn);
+            }
+            OutputDebugStringW(L"]");
+
+            break;
+        case JsNumber:
         case JsArray:
         case JsTypedArray:
             JsValueRef resultJSON;
+            const wchar_t* szJson;
+            size_t sJson;
             IfFailRet(self->JsonStringify(value, &resultJSON));
-            IfFailRet(JsStringToPointer(resultJSON, szResult, sResult));
+            IfFailRet(JsStringToPointer(resultJSON, &szJson, &sJson));
+            OutputDebugStringW(szJson);
             break;
-        case JsFunction:
         case JsError:
         case JsSymbol:
         case JsArrayBuffer:
             JsValueRef resultString;
+            const wchar_t* szStr;
+            size_t sStr;
             IfFailRet(JsConvertValueToString(value, &resultString));
-            IfFailRet(JsStringToPointer(resultString, szResult, sResult));
+            IfFailRet(JsStringToPointer(resultString, &szStr, &sStr));
+            OutputDebugStringW(szStr);
             break;
     }
 
@@ -68,11 +140,7 @@ JsValueRef InvokeConsole(const wchar_t* kind, JsValueRef callee, bool isConstruc
     // First argument is this-context, ignore...
     for (USHORT i = 1; i < argumentCount; i++)
     {
-        const wchar_t* szBuf;
-        size_t szBufLen;
-        IfFailThrow(Stringify(arguments[i], self, &szBuf, &szBufLen), L"Failed to convert object to string");
-
-        OutputDebugStringW(szBuf);
+        IfFailThrow(Stringify(arguments[i], self), L"Failed to convert object to string");
         OutputDebugStringW(L" ");
     }
 

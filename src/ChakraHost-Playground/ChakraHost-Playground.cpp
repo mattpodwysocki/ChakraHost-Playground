@@ -3,6 +3,7 @@
 
 #include "stdafx.h"
 #include "ChakraHost.h"
+#include "asprintf.h"
 
 int RunScript()
 {
@@ -59,6 +60,11 @@ cleanup:
 
 int SerializeScript()
 {
+    wchar_t* szBuf = NULL;
+    _aswprintf(&szBuf, L"foo: %s bar: %d baz: %f\n", L"hi", 42, 42.0);
+    wprintf(szBuf);
+    free(szBuf);
+
     ChakraHost host;
     JsErrorCode status = JsNoError;
 
@@ -99,7 +105,7 @@ int SerializeScript()
     wprintf(L"Result: %f\n", resultValue);
 
     JsValueRef scriptResult;
-    const wchar_t* szScript = L"(() => { return function add(x, y) { console.log(x, y, _, _.add); return _.add(x, y); }; })();";
+    const wchar_t* szScript = L"(() => { return function add(x, y) { console.log({ foo: function bar(xx) { return xx; }, baz: 42 }); return _.add(x, y); }; })();";
     IfFailRet(host.RunScript(szScript, L"", &scriptResult));
 
     JsValueRef addResult;
