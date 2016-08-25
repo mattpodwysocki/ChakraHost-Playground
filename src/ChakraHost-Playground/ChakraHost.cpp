@@ -103,9 +103,46 @@ JsErrorCode Stringify(JsValueRef value, ChakraHost* self)
             OutputDebugStringW(L"]");
 
             break;
+        case JsTypedArray:
+            JsTypedArrayType arrayType;
+            JsValueRef arrayBuffer;
+            UINT byteOffset, byteLength;
+            IfFailRet(JsGetTypedArrayInfo(value, &arrayType, &arrayBuffer, &byteOffset, &byteLength));
+
+            switch (arrayType)
+            {
+                case JsArrayTypeInt8:
+                    OutputDebugStringW(L"Int8Array ");
+                    break;
+                case JsArrayTypeUint8:
+                    OutputDebugStringW(L"Uint8Array ");
+                    break;
+                case JsArrayTypeUint8Clamped:
+                    OutputDebugStringW(L"Uint8ClampedArray ");
+                    break;
+                case JsArrayTypeInt16:
+                    OutputDebugStringW(L"Int16Array ");
+                    break;
+                case JsArrayTypeUint16:
+                    OutputDebugStringW(L"Uint16Array ");
+                    break;
+                case JsArrayTypeInt32:
+                    OutputDebugStringW(L"Int32Array ");
+                    break;
+                case JsArrayTypeUint32:
+                    OutputDebugStringW(L"Uint32Array ");
+                    break;
+                case JsArrayTypeFloat32:
+                    OutputDebugStringW(L"Float32Array ");
+                    break;
+                case JsArrayTypeFloat64:
+                    OutputDebugStringW(L"Float64Array ");
+                    break;
+            }
+
+            break;
         case JsNumber:
         case JsArray:
-        case JsTypedArray:
             JsValueRef resultJSON;
             const wchar_t* szJson;
             size_t sJson;
