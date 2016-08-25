@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "ChakraHost.h"
 #include "SerializedSourceContext.h"
-#include "asprintf.h"
+#include "JsStringify.h"
 
 void ThrowException(const wchar_t* szException)
 {
@@ -23,153 +23,12 @@ JsErrorCode DefineHostCallback(JsValueRef globalObject, const wchar_t *callbackN
     IfFailRet(JsSetProperty(globalObject, propertyId, function, true));
 
     return JsNoError;
-};
-
-JsErrorCode Stringify(JsValueRef value, ChakraHost* self)
-{
-    JsValueType type;
-    IfFailRet(JsGetValueType(value, &type));
-
-    switch (type)
-    {
-        case JsUndefined:
-            OutputDebugStringW(L"undefined");
-            break;
-        case JsNull:
-            OutputDebugStringW(L"null");
-            break;
-        case JsBoolean:
-            bool bResult;
-            IfFailRet(JsBooleanToBool(value, &bResult));
-            OutputDebugStringW(bResult ? L"true" : L"false");
-            break;
-        case JsString:
-            const wchar_t* szResult;
-            size_t sResult;
-            IfFailRet(JsStringToPointer(value, &szResult, &sResult));
-            OutputDebugStringW(szResult);
-            break;
-        case JsObject:
-            JsValueRef props;
-            IfFailRet(JsGetOwnPropertyNames(value, &props));
-
-            JsPropertyIdRef lengthId;
-            JsValueRef lengthProp;
-            int lengthValue;
-            IfFailRet(JsGetPropertyIdFromName(L"length", &lengthId));
-            IfFailRet(JsGetProperty(props, lengthId, &lengthProp));
-            IfFailRet(JsNumberToInt(lengthProp, &lengthValue));
-
-            OutputDebugStringW(L"{ ");
-
-            for (int i = 0; i < lengthValue; i++)
-            {
-                JsPropertyIdRef propId;
-                JsValueRef index, indexResult, prop;
-                const wchar_t* szProp;
-                size_t sProp;
-                IfFailRet(JsIntToNumber(i, &index));
-                IfFailRet(JsGetIndexedProperty(props, index, &indexResult));
-                IfFailRet(JsStringToPointer(indexResult, &szProp, &sProp));
-                IfFailRet(JsGetPropertyIdFromName(szProp, &propId));
-                IfFailRet(JsGetProperty(value, propId, &prop));
-
-                OutputDebugStringW(szProp);
-                OutputDebugStringW(L": ");
-                IfFailRet(Stringify(prop, self));
-                OutputDebugStringW(L" ");
-            }
-
-            OutputDebugStringW(L"}");
-            break;
-        case JsFunction:
-            JsPropertyIdRef nameId;
-            JsValueRef nameObj;
-            const wchar_t* szName;
-            size_t sName;
-
-            IfFailRet(JsGetPropertyIdFromName(L"name", &nameId));
-            IfFailRet(JsGetProperty(value, nameId, &nameObj));
-            IfFailRet(JsStringToPointer(nameObj, &szName, &sName));
-            
-            OutputDebugStringW(L"[Function");
-            if (sName > 0)
-            {
-                wchar_t* szFn = NULL;
-                _aswprintf(&szFn, L": %s", szName);
-                OutputDebugStringW(szFn);
-                free(szFn);
-            }
-            OutputDebugStringW(L"]");
-
-            break;
-        case JsTypedArray:
-            JsTypedArrayType arrayType;
-            JsValueRef arrayBuffer;
-            UINT byteOffset, byteLength;
-            IfFailRet(JsGetTypedArrayInfo(value, &arrayType, &arrayBuffer, &byteOffset, &byteLength));
-
-            switch (arrayType)
-            {
-                case JsArrayTypeInt8:
-                    OutputDebugStringW(L"Int8Array ");
-                    break;
-                case JsArrayTypeUint8:
-                    OutputDebugStringW(L"Uint8Array ");
-                    break;
-                case JsArrayTypeUint8Clamped:
-                    OutputDebugStringW(L"Uint8ClampedArray ");
-                    break;
-                case JsArrayTypeInt16:
-                    OutputDebugStringW(L"Int16Array ");
-                    break;
-                case JsArrayTypeUint16:
-                    OutputDebugStringW(L"Uint16Array ");
-                    break;
-                case JsArrayTypeInt32:
-                    OutputDebugStringW(L"Int32Array ");
-                    break;
-                case JsArrayTypeUint32:
-                    OutputDebugStringW(L"Uint32Array ");
-                    break;
-                case JsArrayTypeFloat32:
-                    OutputDebugStringW(L"Float32Array ");
-                    break;
-                case JsArrayTypeFloat64:
-                    OutputDebugStringW(L"Float64Array ");
-                    break;
-            }
-
-            break;
-        case JsNumber:
-        case JsArray:
-            JsValueRef resultJSON;
-            const wchar_t* szJson;
-            size_t sJson;
-            IfFailRet(self->JsonStringify(value, &resultJSON));
-            IfFailRet(JsStringToPointer(resultJSON, &szJson, &sJson));
-            OutputDebugStringW(szJson);
-            break;
-        case JsError:
-        case JsSymbol:
-        case JsArrayBuffer:
-            JsValueRef resultString;
-            const wchar_t* szStr;
-            size_t sStr;
-            IfFailRet(JsConvertValueToString(value, &resultString));
-            IfFailRet(JsStringToPointer(resultString, &szStr, &sStr));
-            OutputDebugStringW(szStr);
-            break;
-    }
-
-    return JsNoError;
 }
 
 JsValueRef InvokeConsole(const wchar_t* kind, JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState)
 {
 #ifdef _DEBUG
 
-    ChakraHost* self = (ChakraHost*)callbackState;
     wchar_t buff[56];
     swprintf(buff, 56, L"[JS {%s}] ", kind);
     OutputDebugStringW(buff);
@@ -177,7 +36,8 @@ JsValueRef InvokeConsole(const wchar_t* kind, JsValueRef callee, bool isConstruc
     // First argument is this-context, ignore...
     for (USHORT i = 1; i < argumentCount; i++)
     {
-        IfFailThrow(Stringify(arguments[i], self), L"Failed to convert object to string");
+        std::set<JsValueRef> values;
+        IfFailThrow(StringifyJsValue(arguments[i], 0, values), L"Failed to convert object to string");
         OutputDebugStringW(L" ");
     }
 

@@ -33,6 +33,9 @@
     <ClInclude Include="asprintf.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="JsStringify.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -45,6 +48,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="asprintf.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="JsStringify.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
